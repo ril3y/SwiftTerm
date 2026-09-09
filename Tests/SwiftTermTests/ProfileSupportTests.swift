@@ -225,6 +225,35 @@ final class BackgroundOpacityTests {
         #expect (view.backgroundOpacity == 0.0)
     }
 
+    /// iTerm2-style translucency: with `translucentCellBackgrounds` on, explicit
+    /// cell backgrounds take the default background's alpha; text, reverse
+    /// video and the default (opaque) case are untouched.
+    @Test func explicitCellBackgroundsFollowOpacityWhenEnabled () {
+        let view = TerminalView (frame: CGRect (x: 0, y: 0, width: 400, height: 300))
+        view.backgroundOpacity = 0.4
+        let red = Attribute.Color.ansi256 (code: 1)
+        let teal = Attribute.Color.trueColor (red: 10, green: 120, blue: 130)
+
+        // Default: Terminal.app behavior — explicit backgrounds stay opaque.
+        #expect (view.translucentCellBackgrounds == false)
+        #expect (view.mapColor (color: red, isFg: false, isBold: false).alphaComponent == 1)
+        #expect (view.mapColor (color: teal, isFg: false, isBold: false).alphaComponent == 1)
+
+        view.translucentCellBackgrounds = true
+        #expect (abs (view.mapColor (color: red, isFg: false, isBold: false).alphaComponent - 0.4) < 0.001)
+        #expect (abs (view.mapColor (color: teal, isFg: false, isBold: false).alphaComponent - 0.4) < 0.001)
+        // The same palette entry as FOREGROUND stays opaque (shared cache).
+        #expect (view.mapColor (color: red, isFg: true, isBold: false).alphaComponent == 1)
+        #expect (view.mapColor (color: teal, isFg: true, isBold: false).alphaComponent == 1)
+        // Reverse-video highlight stays the one opaque block.
+        #expect (view.mapColor (color: .defaultInvertedColor, isFg: false, isBold: false).alphaComponent == 1)
+
+        // A fully opaque terminal is unchanged by the option.
+        view.backgroundOpacity = 1.0
+        #expect (view.mapColor (color: red, isFg: false, isBold: false).alphaComponent == 1)
+        #expect (view.mapColor (color: teal, isFg: false, isBold: false).alphaComponent == 1)
+    }
+
     @Test func alphaBearingBackgroundReadsAsOpacity () {
         let view = TerminalView (frame: CGRect (x: 0, y: 0, width: 400, height: 300))
         view.nativeBackgroundColor = NSColor (srgbRed: 0, green: 0, blue: 0, alpha: 0.85)
